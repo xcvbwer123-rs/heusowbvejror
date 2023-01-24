@@ -1,6 +1,7 @@
 -- << SERVICES >>
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
+local CoreGui = game:GetService("CoreGui")
 
 -- << LIBRARYS >>
 local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))() if game.PlaceId ~= 5720801512 then OrionLib:MakeNotification({Name = "오류", Content = "이 스크립트는 \"한국 머더\"에서만 사용되도록 제작되었습니다.", Time = 5}) return end
@@ -10,6 +11,7 @@ local GameEsp = loadstring(game:HttpGetAsync("https://pastebin.com/raw/zV9uJtws"
 local KillAura = loadstring(game:HttpGetAsync("https://pastebin.com/raw/aG6FydaX"))()
 local PlayerModule = loadstring(game:HttpGetAsync("https://pastebin.com/raw/y1v0VbMJ"))()
 local SheriffModule = loadstring(game:HttpGetAsync("https://pastebin.com/raw/zHZdi1FP"))()
+local Discord = loadstring(game:HttpGetAsync("https://pastebin.com/raw/9S91AeyX"))()
 
 -- << PLAYER INSTANCE >>
 local LocalPlayer = Players.LocalPlayer
@@ -24,6 +26,7 @@ local DropNotice = false
 local AutoGunCollect = false
 local IsInRound = false
 local OldNameCall
+local Folder = CoreGui:FindFirstChild("Humanoids") or Instance.new("Folder")
 
 -- << UTILITY FUNCTIONS >>
 local function IsPlayerInMap(Player: Player)
@@ -112,6 +115,47 @@ local function CA2(Child: Instance)
     end
 end
 
+local function GodMode()
+    local Assets = {}
+    Folder.Name = "Humanoids"
+    Folder.Parent = workspace
+    local Humanoid: Humanoid
+    for _, Asset in ipairs(LocalPlayer.Character:GetChildren()) do
+        if Asset:IsA("Accessory") then
+            table.insert(Assets, Asset:Clone())
+        elseif Asset:IsA("Humanoid") then
+            Humanoid = Asset
+        end
+    end
+    local Animate = LocalPlayer.Character:FindFirstChild("Animate")
+    local NewHumanoid = Humanoid:Clone()
+    Humanoid.Parent = Folder
+    NewHumanoid.Parent = LocalPlayer.Character
+    NewHumanoid.HipHeight = Humanoid.HipHeight
+    NewHumanoid.Name = "Humanoid"
+    local Connection
+    Connection = Humanoid.Jumping:Connect(function()
+        NewHumanoid.Jump = Humanoid.Jump
+    end)
+    NewHumanoid.Destroying:Once(function()
+        Connection:Disconnect()
+    end)
+    Humanoid.Destroying:Once(function()
+        Connection:Disconnect()
+    end)
+    for _, Asset in ipairs(Assets) do
+        NewHumanoid:AddAccessory(Asset)
+    end
+    Animate.Disabled = true
+    task.wait()
+    Animate.Disabled = false
+    OrionLib:MakeNotification({
+        Name = "주의",
+        Content = "무적 상테에서는 일부 기능이 작동하지 않을수도 있습니다.",
+        Time = 6
+    })
+end
+
 -- << GUI TABS >>
 local Window = OrionLib:MakeWindow({IntroText = "머더 GUI V1.0", IntroIcon = "http://www.roblox.com/asset/?id=6022668911", Name = "한국머더 GUI V1.0", Icon = "http://www.roblox.com/asset/?id=6022668911", HidePremium = false, SaveConfig = false})
 
@@ -151,7 +195,15 @@ local ExtraTab = Window:MakeTab({
     PremiumOnly = false,
 })
 
+local CreditTab = Window:MakeTab({
+    Name = "크레딧",
+    Icon = "http://www.roblox.com/asset/?id=6026568189",
+    PremiumOnly = false,
+})
+
 -- << VISUALIZE TAB >>
+VisualizeTab:AddSection({Name = "플레이어 관련"})
+
 VisualizeTab:AddToggle({
     Name = "머더 표시",
     Default = false,
@@ -175,6 +227,8 @@ VisualizeTab:AddToggle({
         GameEsp:Edit("OthersEsp", Value)
     end
 })
+
+VisualizeTab:AddSection({Name = "디버그 관련"})
 
 VisualizeTab:AddToggle({
     Name = "에임봇 타겟 위치 표시",
@@ -261,11 +315,6 @@ SheriffTab:AddToggle({
     end
 })
 
-SheriffTab:AddButton({
-    Name = "머더 바로 죽이기 (개발중)",
-    Callback = SheriffModule.EndRound
-})
-
 -- << SILENT AIM TAB >>
 SilentAimTab:AddToggle({
     Name = "자동 에임 사용",
@@ -335,11 +384,20 @@ PlayerTab:AddSlider({
 PlayerTab:AddButton({
     Name = "리스폰",
     Callback = function()
-        LocalPlayer.Character.Humanoid.Health = 0
+        LocalPlayer.Character.Humanoid.Health = -1972
+        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+        Folder:ClearAllChildren()
     end
 })
 
+PlayerTab:AddButton({
+    Name = "무적",
+    Callback = GodMode
+})
+
 -- << EXTRA TAB >>
+ExtraTab:AddSection({Name = "코인 관련"})
+
 ExtraTab:AddToggle({
     Name = "코인 자석",
     Default = false,
@@ -365,6 +423,8 @@ ExtraTab:AddSlider({
 	end
 })
 
+ExtraTab:AddSection({Name = "총 관련"})
+
 ExtraTab:AddToggle({
     Name = "총 드롭 알림",
     Default = false,
@@ -386,6 +446,22 @@ ExtraTab:AddButton({
     Callback = AutoCollect
 })
 
+ExtraTab:AddSection({Name = "텔레포트"})
+
+ExtraTab:AddButton({
+    Name = "맵으로 이동",
+    Callback = TeleportToMap
+})
+
+ExtraTab:AddButton({
+    Name = "로비로 이동",
+    Callback = function()
+        LocalPlayer.Character:MoveTo(workspace.Lobby.MapVote.VotePart2.Position)
+    end
+})
+
+ExtraTab:AddSection({Name = "서버 및 맵"})
+
 ExtraTab:AddButton({
     Name = "무기 스케너 제거",
     Callback = function()
@@ -402,21 +478,100 @@ ExtraTab:AddButton({
 })
 
 ExtraTab:AddButton({
-    Name = "맵으로 이동",
-    Callback = TeleportToMap
-})
-
-ExtraTab:AddButton({
-    Name = "로비로 이동",
-    Callback = function()
-        LocalPlayer.Character:MoveTo(workspace.Lobby.MapVote.VotePart2.Position)
-    end
-})
-
-ExtraTab:AddButton({
     Name = "서버 제접속",
     Callback = function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId)
+    end
+})
+
+-- << COMMUNITY & CREDIT >>
+local Orion
+if gethui then
+	Orion = gethui():WaitForChild("Orion")
+else
+	Orion = CoreGui:WaitForChild("Orion")
+end
+
+local Window
+for _, Frame in ipairs(Orion:GetChildren()) do
+	if Frame:FindFirstChildOfClass("UICorner") then
+		Window = Frame
+		break
+	end
+end
+
+local LastContainer
+for _, Container in ipairs(Window:GetChildren()) do
+	if Container:IsA("ScrollingFrame") then
+		LastContainer = Container
+	end
+end
+
+local Frame = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local ImageLabel = Instance.new("ImageLabel")
+local UICorner_2 = Instance.new("UICorner")
+local TextLabel = Instance.new("TextLabel")
+local TextLabel_2 = Instance.new("TextLabel")
+local UIStroke = Instance.new("UIStroke")
+
+Frame.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
+Frame.BorderSizePixel = 0
+Frame.Size = UDim2.new(1, 0, 0, 80)
+
+UICorner.CornerRadius = UDim.new(0, 5)
+UICorner.Parent = Frame
+
+ImageLabel.Parent = Frame
+ImageLabel.AnchorPoint = Vector2.new(0, 0.5)
+ImageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ImageLabel.BackgroundTransparency = 1.000
+ImageLabel.Position = UDim2.new(0, 12, 0.5, 0)
+ImageLabel.Size = UDim2.new(0.800000012, 0, 0.800000012, 0)
+ImageLabel.SizeConstraint = Enum.SizeConstraint.RelativeYY
+ImageLabel.Image = "http://www.roblox.com/asset/?id=12247177291"
+
+UICorner_2.CornerRadius = UDim.new(1, 0)
+UICorner_2.Parent = ImageLabel
+
+TextLabel.Parent = Frame
+TextLabel.AnchorPoint = Vector2.new(1, 0)
+TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.BackgroundTransparency = 1.000
+TextLabel.Position = UDim2.new(1, -12, 0, 12)
+TextLabel.Size = UDim2.new(1, -104, 0.400000006, 0)
+TextLabel.Font = Enum.Font.Unknown
+TextLabel.Text = "Script by DC"
+TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.TextScaled = true
+TextLabel.TextSize = 14.000
+TextLabel.TextWrapped = true
+TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+TextLabel_2.Parent = Frame
+TextLabel_2.AnchorPoint = Vector2.new(1, 1)
+TextLabel_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel_2.BackgroundTransparency = 1.000
+TextLabel_2.Position = UDim2.new(1, -11, 1, -12)
+TextLabel_2.Size = UDim2.new(1, -104, 0.25, 0)
+TextLabel_2.Font = Enum.Font.Unknown
+TextLabel_2.Text = "Discord: DC#1071"
+TextLabel_2.TextColor3 = Color3.fromRGB(167, 167, 167)
+TextLabel_2.TextScaled = true
+TextLabel_2.TextSize = 14.000
+TextLabel_2.TextWrapped = true
+TextLabel_2.TextXAlignment = Enum.TextXAlignment.Left
+
+UIStroke.Parent = Frame
+UIStroke.Color = Color3.fromRGB(60, 60, 60)
+UIStroke.Thickness = 1
+
+Frame.Parent = LastContainer
+
+CreditTab:AddButton({
+    Name = "로컬X 커뮤니티",
+    Callback = function()
+        Discord:RequestJoin("54G7hdrwMj")
     end
 })
 
@@ -435,3 +590,7 @@ OldNameCall = hookmetamethod(game, "__namecall", function(Self, ...)
 end)
 
 workspace.ChildAdded:Connect(CA2)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    Folder:ClearAllChildren()
+end)
