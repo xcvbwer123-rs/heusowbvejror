@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local CoreGui = game:GetService("CoreGui")
 
--- << LIBRARYS >>
+-- << LIBRARIES >>
 local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source'))() if game.PlaceId ~= 5720801512 then OrionLib:MakeNotification({Name = "오류", Content = "이 스크립트는 \"한국 머더\"에서만 사용되도록 제작되었습니다.", Time = 5}) return end
 local SilentAim = loadstring(game:HttpGetAsync("https://pastebin.com/raw/pavCCfAt"))()
 local CoinCollect = loadstring(game:HttpGetAsync("https://pastebin.com/raw/0mpcgykG"))()
@@ -156,8 +156,42 @@ local function GodMode()
     })
 end
 
+local function Invisible()
+    local removeNametags = false -- remove custom billboardgui nametags from hrp, could trigger anticheat
+
+    local plr = game:GetService("Players").LocalPlayer
+    local character = plr.Character
+    local hrp = character.HumanoidRootPart
+    local old = hrp.CFrame
+
+    if not character:FindFirstChild("LowerTorso") or character.PrimaryPart ~= hrp then
+    return print("unsupported")
+    end
+
+    if removeNametags then
+    local tag = hrp:FindFirstChildOfClass("BillboardGui")
+    if tag then tag:Destroy() end
+
+    hrp.ChildAdded:Connect(function(item)
+    if item:IsA("BillboardGui") then
+    task.wait()
+    item:Destroy()
+    end
+    end)
+    end
+
+    local newroot = character.LowerTorso.Root:Clone()
+    hrp.Parent = workspace
+    character.PrimaryPart = hrp
+    character:MoveTo(Vector3.new(old.X,9e9,old.Z))
+    hrp.Parent = character
+    task.wait(0.5)
+    newroot.Parent = hrp
+    hrp.CFrame = old
+end
+
 -- << GUI TABS >>
-local Window = OrionLib:MakeWindow({IntroText = "머더 GUI V1.0", IntroIcon = "http://www.roblox.com/asset/?id=6022668911", Name = "한국머더 GUI V1.0", Icon = "http://www.roblox.com/asset/?id=6022668911", HidePremium = false, SaveConfig = false})
+local Window = OrionLib:MakeWindow({IntroText = "머더 GUI V1.2", IntroIcon = "http://www.roblox.com/asset/?id=6022668911", Name = "한국머더 GUI V1.2", Icon = "http://www.roblox.com/asset/?id=6022668911", HidePremium = false, SaveConfig = true})
 
 local VisualizeTab = Window:MakeTab({
     Name = "ESP 및 시각",
@@ -207,6 +241,8 @@ VisualizeTab:AddSection({Name = "플레이어 관련"})
 VisualizeTab:AddToggle({
     Name = "머더 표시",
     Default = false,
+    Flag = "ShowMurderer",
+    Save = true,
     Callback = function(Value)
         GameEsp:Edit("MurdererEsp", Value)
     end
@@ -215,6 +251,8 @@ VisualizeTab:AddToggle({
 VisualizeTab:AddToggle({
     Name = "보안관 표시",
     Default = false,
+    Flag = "ShowSheriff",
+    Save = true,
     Callback = function(Value)
         GameEsp:Edit("SheriffEsp", Value)
     end
@@ -223,6 +261,8 @@ VisualizeTab:AddToggle({
 VisualizeTab:AddToggle({
     Name = "기타 플레이어 표시",
     Default = false,
+    Flag = "ShowExtraPlayers",
+    Save = true,
     Callback = function(Value)
         GameEsp:Edit("OthersEsp", Value)
     end
@@ -233,6 +273,8 @@ VisualizeTab:AddSection({Name = "디버그 관련"})
 VisualizeTab:AddToggle({
     Name = "에임봇 타겟 위치 표시",
     Default = false,
+    Flag = "AimbotDebug",
+    Save = true,
     Callback = function(Value)
         SilentAim:EditSettings("Debug", Value)
     end
@@ -241,6 +283,8 @@ VisualizeTab:AddToggle({
 VisualizeTab:AddToggle({
     Name = "머더 킬 범위 표시",
     Default = false,
+    Flag = "KillAuraRange",
+    Save = true,
     Callback = function(Value)
         KillAura:SetDebug(Value)
     end
@@ -250,6 +294,8 @@ VisualizeTab:AddToggle({
 MurdererTab:AddToggle({
     Name = "킬 범위 수정",
     Default = false,
+    Flag = "EditKillRange",
+    Save = true,
     Callback = function(Value)
         if Value then
             KillAura:Enable()
@@ -267,6 +313,8 @@ MurdererTab:AddSlider({
 	Color = Color3.fromRGB(80, 135, 255),
 	Increment = 1,
 	ValueName = "스터드",
+    Flag = "KD",
+    Save = true,
 	Callback = function(Value)
 		KillAura:Range(Value)
 	end
@@ -275,6 +323,8 @@ MurdererTab:AddSlider({
 MurdererTab:AddToggle({
     Name = "범위 내의 사람들을 자동으로 죽이기",
     Default = false,
+    Flag = "AK",
+    Save = true,
     Callback = function(Value)
         KillAura:SetAutoKill(Value)
     end
@@ -289,6 +339,8 @@ MurdererTab:AddButton({
 SheriffTab:AddToggle({
     Name = "머더 자동 사격",
     Default = false,
+    Flag = "AS",
+    Save = true,
     Callback = function(Value)
         SheriffModule:SetAutoShoot(Value)
     end
@@ -302,6 +354,8 @@ SheriffTab:AddSlider({
 	Color = Color3.fromRGB(80, 135, 255),
 	Increment = 1,
 	ValueName = "스터드",
+    Flag = "SD",
+    Save = true,
 	Callback = function(Value)
 		SheriffModule:SetRange(Value)
 	end
@@ -310,6 +364,8 @@ SheriffTab:AddSlider({
 SheriffTab:AddToggle({
     Name = "화면에서 보일때만 쏘기",
     Default = true,
+    Flag = "SS",
+    Save = true,
     Callback = function(Value)
         SheriffModule:SetVisible(Value)
     end
@@ -319,6 +375,8 @@ SheriffTab:AddToggle({
 SilentAimTab:AddToggle({
     Name = "자동 에임 사용",
     Default = false,
+    Flag = "USA",
+    Save = true,
     Callback = function(Value)
         if Value then
             SilentAim:Enable()
@@ -336,6 +394,8 @@ SilentAimTab:AddSlider({
 	Color = Color3.fromRGB(80, 135, 255),
 	Increment = 5,
 	ValueName = "%",
+    Flag = "TSKA",
+    Save = true,
 	Callback = function(Value)
 		SilentAim:EditSettings("KnifeAccuracy", Value)
 	end
@@ -349,6 +409,8 @@ SilentAimTab:AddSlider({
 	Color = Color3.fromRGB(80, 135, 255),
 	Increment = 5,
 	ValueName = "%",
+    Flag = "TSGA",
+    Save = true,
 	Callback = function(Value)
 		SilentAim:EditSettings("GunAccuracy", Value)
 	end
@@ -363,6 +425,8 @@ PlayerTab:AddSlider({
 	Color = Color3.fromRGB(80, 135, 255),
 	Increment = 1,
 	ValueName = "",
+    Flag = "WS",
+    Save = true,
 	Callback = function(Value)
 		PlayerModule:Edit("WalkSpeed", Value)
 	end
@@ -376,6 +440,8 @@ PlayerTab:AddSlider({
 	Color = Color3.fromRGB(80, 135, 255),
 	Increment = 1,
 	ValueName = "",
+    Flag = "JP",
+    Save = true,
 	Callback = function(Value)
 		PlayerModule:Edit("JumpPower", Value)
 	end
@@ -395,12 +461,19 @@ PlayerTab:AddButton({
     Callback = GodMode
 })
 
+PlayerTab:AddButton({
+    Name = "투명화",
+    Callback = Invisible
+})
+
 -- << EXTRA TAB >>
 ExtraTab:AddSection({Name = "코인 관련"})
 
 ExtraTab:AddToggle({
     Name = "코인 자석",
     Default = false,
+    Flag = "CCE",
+    Save = true,
     Callback = function(Value)
         if Value then
             CoinCollect:Enable()
@@ -418,6 +491,8 @@ ExtraTab:AddSlider({
 	Color = Color3.fromRGB(80, 135, 255),
 	Increment = 0.5,
 	ValueName = "스터드",
+    Flag = "CCR",
+    Save = true,
 	Callback = function(Value)
         CoinCollect:Range(Value)
 	end
@@ -428,6 +503,8 @@ ExtraTab:AddSection({Name = "총 관련"})
 ExtraTab:AddToggle({
     Name = "총 드롭 알림",
     Default = false,
+    Flag = "GDN",
+    Save = true,
     Callback = function(Value)
         DropNotice = Value
     end
@@ -436,6 +513,8 @@ ExtraTab:AddToggle({
 ExtraTab:AddToggle({
     Name = "총 자동 얻기",
     Default = false,
+    Flag = "GAC",
+    Save = true,
     Callback = function(Value)
         AutoGunCollect = Value
     end
